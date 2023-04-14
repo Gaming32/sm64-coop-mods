@@ -1,6 +1,14 @@
 -- name: Star + Death Messages
 -- description: Star + Death Messages\nby \\#437fcc\\Gaming32\\#ffffff\\\n\nShows popups when players die or collect a star!
 
+isDead = false
+
+function updateHook()
+    if gMarioStates[0].health >= 0x0100 then
+        isDead = false
+    end
+end
+
 ---@param message string
 ---@param lines integer
 function popupBroadcast(message, lines)
@@ -10,7 +18,7 @@ end
 
 ---@return string
 function getDisplayName()
-    return network_get_player_text_color_string(0) .. network_player_from_global_index(0).name .. "\\#dcdcdc\\"
+    return network_get_player_text_color_string(0) .. gNetworkPlayers[0].name .. "\\#dcdcdc\\"
 end
 
 ---@param interactor MarioState
@@ -36,13 +44,17 @@ function deathMessageHook(localMario)
     if localMario.playerIndex ~= 0 then
         return true
     end
+    if isDead then
+        return true
+    end
+    isDead = true
     local message = "%s died."
     if localMario.action == ACT_DROWNING then
         message = "%s drowned."
     elseif localMario.action == ACT_CAUGHT_IN_WHIRLPOOL then
         message = "%s was sucked into a whirlpool."
     elseif localMario.action == ACT_LAVA_BOOST then
-        message = "%s hurt their bum."
+        message = "%s lit their bum on fire."
     elseif localMario.action == ACT_QUICKSAND_DEATH then
         message = "%s drowned in sand."
     elseif localMario.action == ACT_EATEN_BY_BUBBA then
@@ -77,6 +89,7 @@ function packetReceiveHook(dataTable)
     djui_popup_create(dataTable.message, dataTable.lines)
 end
 
+hook_event(HOOK_UPDATE, updateHook)
 hook_event(HOOK_ON_INTERACT, starMessageHook)
 hook_event(HOOK_ON_DEATH, deathMessageHook)
 hook_event(HOOK_ON_PACKET_RECEIVE, packetReceiveHook)
