@@ -42,7 +42,7 @@ function deathMessageHook(localMario)
     elseif localMario.action == ACT_CAUGHT_IN_WHIRLPOOL then
         message = "%s was sucked into a whirlpool."
     elseif localMario.action == ACT_LAVA_BOOST then
-        message = "%s tried to skip with a lava bounce."
+        message = "%s hurt their bum."
     elseif localMario.action == ACT_QUICKSAND_DEATH then
         message = "%s drowned in sand."
     elseif localMario.action == ACT_EATEN_BY_BUBBA then
