@@ -2,10 +2,14 @@
 -- description: Star + Death Messages\nby \\#437fcc\\Gaming32\\#ffffff\\\n\nShows popups when players die or collect a star!
 
 isDead = false
+fellOutOfWorld = -1
 
 function updateHook()
     if gMarioStates[0].health >= 0x0100 then
         isDead = false
+    end
+    if gNetworkPlayers[0].currLevelNum ~= fellOutOfWorld then
+        fellOutOfWorld = -1
     end
 end
 
@@ -79,6 +83,17 @@ function deathMessageHook(localMario)
         if localMario.prevAction == ACT_HARD_FORWARD_GROUND_KB then
             message = "%s fell from a high place."
         end
+    elseif (localMario.floor.type == SURFACE_DEATH_PLANE) and (localMario.pos.y < localMario.floorHeight + 2048) then
+        ---@type NetworkPlayer
+        local networkPlayer = gNetworkPlayers[0]
+        local level = networkPlayer.currLevelNum
+        if level == fellOutOfWorld then
+            return
+        end
+        fellOutOfWorld = level
+        message = "%s fell out of " .. get_level_name(
+            networkPlayer.currCourseNum, level, networkPlayer.currAreaIndex
+        ) .. "."
     end
     popupBroadcast(string.format(message, getDisplayName()), 1)
     return true
