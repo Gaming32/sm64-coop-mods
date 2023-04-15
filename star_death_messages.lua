@@ -134,7 +134,6 @@ end
 ---@param mario MarioState
 function marioDamageKbHook(mario)
     if mario.interactObj == nil then return end
-    djui_chat_message_create(tostring(mario.interactObj.oInteractStatus) .. " " .. tostring(mario.interactObj.oInteractStatus & INT_STATUS_ATTACKED_MARIO))
     if (mario.interactObj.oInteractStatus & INT_STATUS_ATTACKED_MARIO) ~= 0 then
         hurtMario = mario.interactObj
     end
@@ -185,5 +184,3 @@ if network_is_server() then
         showInPopupCommand
     )
 end
-
-gLevelValues.entryLevel = LEVEL_BOB
