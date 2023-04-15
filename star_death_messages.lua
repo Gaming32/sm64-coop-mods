@@ -36,8 +36,12 @@ function popupBroadcast(message, lines)
     network_send(true, {message = message, lines = lines})
 end
 
+---@param player NetworkPlayer?
 ---@return string
-function getDisplayName()
+function getDisplayName(player)
+    if player == nil then
+        player = gNetworkPlayers[0]
+    end
     ---@type string
     local baseColor
     if gGlobalSyncTable.sdmInChat then
@@ -45,7 +49,7 @@ function getDisplayName()
     else
         baseColor = POPUP_BASE_COLOR
     end
-    return network_get_player_text_color_string(0) .. gNetworkPlayers[0].name .. baseColor
+    return network_get_player_text_color_string(player.localIndex) .. player.name .. baseColor
 end
 
 ---@param interactor MarioState
@@ -101,16 +105,21 @@ function deathMessageHook(localMario)
         end
     elseif (localMario.action == ACT_DEATH_ON_BACK) or (localMario.action == ACT_DEATH_ON_STOMACH) then
         if hurtMario ~= nil then
-            local objName = get_behavior_name_from_id(get_id_from_behavior(hurtMario.behavior))
-            hurtMario = nil
+            local behavior = get_id_from_behavior(hurtMario.behavior)
             local spacedName = ""
-            for i = 4, #objName do
-                local c = objName:sub(i, i)
-                if (#spacedName > 0) and (c:upper() == c) then
-                    spacedName = spacedName .. " "
+            if behavior == id_bhvMario then
+                spacedName = getDisplayName(network_player_from_global_index(hurtMario.globalPlayerIndex))
+            else
+                local objName = get_behavior_name_from_id(behavior)
+                for i = 4, #objName do
+                    local c = objName:sub(i, i)
+                    if (#spacedName > 0) and (c:upper() == c) then
+                        spacedName = spacedName .. " "
+                    end
+                    spacedName = spacedName .. c
                 end
-                spacedName = spacedName .. c
             end
+            hurtMario = nil
             message = "%s was killed by " .. spacedName .. "."
         else
             message = "%s fell from a high place."
