@@ -1,8 +1,13 @@
 -- name: Star + Death Messages
 -- description: Star + Death Messages\nby \\#437fcc\\Gaming32\\#ffffff\\\n\nShows popups when players die or collect a star!
 
+POPUP_BASE_COLOR = "\\#dcdcdc\\"
+MESSAGE_CHAT_COLOR = "\\#ffff55\\"
+
 isDead = false
 fellOutOfWorld = -1
+
+gGlobalSyncTable.sdmInChat = true
 
 function updateHook()
     if gMarioStates[0].health >= 0x0100 then
@@ -15,14 +20,32 @@ end
 
 ---@param message string
 ---@param lines integer
+function showTheMessage(message, lines)
+    if gGlobalSyncTable.sdmInChat then
+        message = message:gsub("\n", " ")
+        djui_chat_message_create(MESSAGE_CHAT_COLOR .. message .. POPUP_BASE_COLOR)
+    else
+        djui_popup_create(message, lines)
+    end
+end
+
+---@param message string
+---@param lines integer
 function popupBroadcast(message, lines)
-    djui_popup_create(message, lines)
+    showTheMessage(message, lines)
     network_send(true, {message = message, lines = lines})
 end
 
 ---@return string
 function getDisplayName()
-    return network_get_player_text_color_string(0) .. gNetworkPlayers[0].name .. "\\#dcdcdc\\"
+    ---@type string
+    local baseColor
+    if gGlobalSyncTable.sdmInChat then
+        baseColor = MESSAGE_CHAT_COLOR
+    else
+        baseColor = POPUP_BASE_COLOR
+    end
+    return network_get_player_text_color_string(0) .. gNetworkPlayers[0].name .. baseColor
 end
 
 ---@param interactor MarioState
@@ -101,10 +124,45 @@ end
 
 ---@param dataTable table
 function packetReceiveHook(dataTable)
-    djui_popup_create(dataTable.message, dataTable.lines)
+    showTheMessage(dataTable.message, dataTable.lines)
+end
+
+---@param text string
+function parseBoolean(text)
+    text = text:lower()
+    local firstLetter = text:sub(1, 1)
+    if (firstLetter == "t" or firstLetter == "y" or text == "on") then
+        return true
+    end
+    if (firstLetter == "f" or firstLetter == "n" or text == "off") then
+        return false
+    end
+    return nil
+end
+
+---@param msg string
+function showInPopupCommand(msg)
+    if msg:len() > 0 then
+        local value = parseBoolean(msg)
+        if value == nil then
+            djui_chat_message_create("\\#ff0000\\Unknown boolean value " .. msg .. ".\\#ffffff\\")
+            return true
+        end
+        gGlobalSyncTable.sdmInChat = value
+    end
+    djui_chat_message_create("sdm-in-chat is currently " .. tostring(gGlobalSyncTable.sdmInChat))
+    return true
 end
 
 hook_event(HOOK_UPDATE, updateHook)
 hook_event(HOOK_ON_INTERACT, starMessageHook)
 hook_event(HOOK_ON_DEATH, deathMessageHook)
 hook_event(HOOK_ON_PACKET_RECEIVE, packetReceiveHook)
+
+if network_is_server() then
+    hook_chat_command(
+        "sdm-in-chat",
+        "Whether to display Star + Death Messages in chat (as opposed to a popup). Default is true.",
+        showInPopupCommand
+    )
+end
