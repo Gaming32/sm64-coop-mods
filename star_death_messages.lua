@@ -53,9 +53,7 @@ end
 ---@param interactType InteractionType
 ---@param interactValue boolean
 function starMessageHook(interactor, interactee, interactType, interactValue)
-    if (interactor.playerIndex ~= 0) or (interactType ~= INTERACT_STAR_OR_KEY) then
-        return
-    end
+    if (interactor.playerIndex ~= 0) or (interactType ~= INTERACT_STAR_OR_KEY) then return end
     ---@type integer
     local courseId = gNetworkPlayers[0].currCourseNum
     local starId = (interactee.oBehParams >> 24) & 0x1F
@@ -65,6 +63,9 @@ function starMessageHook(interactor, interactee, interactType, interactValue)
         get_star_name(courseId, starId + 1)
     ), 2)
 end
+
+---@type Object | nil
+hurtMario = nil
 
 ---@param localMario MarioState
 function deathMessageHook(localMario)
@@ -98,12 +99,20 @@ function deathMessageHook(localMario)
         if localMario.prevAction == ACT_BURNING_GROUND then
             message = "%s burned to death."
         end
-    elseif localMario.action == ACT_DEATH_ON_BACK then
-        if localMario.prevAction == ACT_HARD_BACKWARD_GROUND_KB then
-            message = "%s fell from a high place."
-        end
-    elseif localMario.action == ACT_DEATH_ON_STOMACH then
-        if localMario.prevAction == ACT_HARD_FORWARD_GROUND_KB then
+    elseif (localMario.action == ACT_DEATH_ON_BACK) or (localMario.action == ACT_DEATH_ON_STOMACH) then
+        if hurtMario ~= nil then
+            local objName = get_behavior_name_from_id(get_id_from_behavior(hurtMario.behavior))
+            hurtMario = nil
+            local spacedName = ""
+            for i = 4, #objName do
+                local c = objName:sub(i, i)
+                if (#spacedName > 0) and (c:upper() == c) then
+                    spacedName = spacedName .. " "
+                end
+                spacedName = spacedName .. c
+            end
+            message = "%s was killed by " .. spacedName .. "."
+        else
             message = "%s fell from a high place."
         end
     elseif (localMario.floor.type == SURFACE_DEATH_PLANE) and (localMario.pos.y < localMario.floorHeight + 2048) then
@@ -120,6 +129,15 @@ function deathMessageHook(localMario)
     end
     popupBroadcast(string.format(message, getDisplayName()), 1)
     return true
+end
+
+---@param mario MarioState
+function marioDamageKbHook(mario)
+    if mario.interactObj == nil then return end
+    djui_chat_message_create(tostring(mario.interactObj.oInteractStatus) .. " " .. tostring(mario.interactObj.oInteractStatus & INT_STATUS_ATTACKED_MARIO))
+    if (mario.interactObj.oInteractStatus & INT_STATUS_ATTACKED_MARIO) ~= 0 then
+        hurtMario = mario.interactObj
+    end
 end
 
 ---@param dataTable table
@@ -142,7 +160,7 @@ end
 
 ---@param msg string
 function showInPopupCommand(msg)
-    if msg:len() > 0 then
+    if #msg > 0 then
         local value = parseBoolean(msg)
         if value == nil then
             djui_chat_message_create("\\#ff0000\\Unknown boolean value " .. msg .. ".\\#ffffff\\")
@@ -157,6 +175,7 @@ end
 hook_event(HOOK_UPDATE, updateHook)
 hook_event(HOOK_ON_INTERACT, starMessageHook)
 hook_event(HOOK_ON_DEATH, deathMessageHook)
+hook_event(HOOK_ON_SET_MARIO_ACTION, marioDamageKbHook)
 hook_event(HOOK_ON_PACKET_RECEIVE, packetReceiveHook)
 
 if network_is_server() then
@@ -166,3 +185,5 @@ if network_is_server() then
         showInPopupCommand
     )
 end
+
+gLevelValues.entryLevel = LEVEL_BOB
