@@ -73,11 +73,8 @@ hurtMario = nil
 
 ---@param localMario MarioState
 function deathMessageHook(localMario)
-    if localMario.playerIndex ~= 0 then
-        return true
-    end
-    if isDead then
-        return true
+    if localMario.playerIndex ~= 0 or isDead then
+        return
     end
     isDead = true
     local message = "%s died."
@@ -137,7 +134,6 @@ function deathMessageHook(localMario)
         ) .. "."
     end
     popupBroadcast(string.format(message, getDisplayName()), 1)
-    return true
 end
 
 ---@param mario MarioState
